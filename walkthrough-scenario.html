@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TVHL — Scenario to quote loop</title>
+<style>
+  :root{
+    --bg:#F5F6F4; --surface:#FFFFFF; --surface-2:#EEF3E8; --ink:#26282B; --soft:#5A6152; --faint:#8A9082;
+    --line:#E1E7DB; --green:#256521; --green-ink:#1A3A16; --bright:#8BC638; --amber:#C77A00;
+    --good:#16A34A; --good-soft:#E4F2DC; --pref:#8B6B00; --pref-soft:#FBF0D0; --sel:#E8F1DF;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0C110A; --surface:#141A11; --surface-2:#1B2415; --ink:#EDF1EA; --soft:#A6AE9B; --faint:#6E7563;
+    --line:#26301F; --green:#8BC638; --green-ink:#B6E06A; --amber:#F0A63A; --good:#5CC08C; --good-soft:#173021;
+    --pref:#E9C766; --pref-soft:#2C2410; --sel:#20301A;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0C110A; --surface:#141A11; --surface-2:#1B2415; --ink:#EDF1EA; --soft:#A6AE9B; --faint:#6E7563;
+    --line:#26301F; --green:#8BC638; --green-ink:#B6E06A; --amber:#F0A63A; --good:#5CC08C; --good-soft:#173021;
+    --pref:#E9C766; --pref-soft:#2C2410; --sel:#20301A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;font-size:13px}
+  .app{display:flex;flex-direction:column;height:100vh;min-height:640px}
+
+  /* stepper */
+  .stepper{display:flex;align-items:center;gap:0;padding:13px 18px;border-bottom:1px solid var(--line);background:var(--surface);overflow-x:auto}
+  .stp{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+  .stp .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--surface-2);color:var(--faint);border:2px solid var(--line);transition:.2s}
+  .stp .t{font-size:11.5px;font-weight:650;color:var(--faint);white-space:nowrap;transition:.2s}
+  .stp.done .n{background:var(--good);color:#fff;border-color:var(--good)}
+  .stp.now .n{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 0 0 4px var(--sel)}
+  .stp.now .t{color:var(--ink)}
+  .stp.done .t{color:var(--soft)}
+  .stp .line{width:26px;height:2px;background:var(--line);margin:0 8px}
+  .stp.done .line{background:var(--good)}
+
+  .stage{flex:1;display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
+  @media(max-width:820px){.stage{grid-template-columns:1fr}}
+  .desk{overflow:auto;padding:18px;min-width:0}
+  .rail{border-left:1px solid var(--line);background:var(--bg);padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  @media(max-width:820px){.rail{border-left:none;border-top:1px solid var(--line)}}
+
+  .kick{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;color:var(--amber)}
+  h2.t{font-family:var(--serif);font-size:20px;margin:6px 0 12px;color:var(--ink)}
+
+  /* inbox */
+  .inbox{display:flex;flex-direction:column;gap:9px}
+  .scn{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;cursor:pointer;transition:border-color .12s,transform .12s}
+  .scn:hover{transform:translateY(-1px);border-color:var(--green)}
+  .scn.hot{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+  .scn .av{width:40px;height:40px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-family:var(--serif);font-weight:600;color:#fff;background:var(--green)}
+  .scn .m{flex:1;min-width:0}
+  .scn .m b{font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:7px}
+  .scn .m span{font-size:12px;color:var(--soft);display:block;margin-top:2px}
+  .scn .when{font-size:11px;color:var(--faint);white-space:nowrap}
+  .tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:999px}
+  .tag.new{color:#fff;background:var(--green)}
+  .tag.wait{color:var(--pref);background:var(--pref-soft)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:13px}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+  .fact span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint)}
+  .fact b{font-size:15px;font-family:var(--serif);color:var(--ink);display:block;margin-top:2px;font-variant-numeric:tabular-nums}
+  .quote-in{background:var(--surface-2);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--ink);font-style:italic}
+  .quote-in b{font-style:normal;color:var(--green);font-weight:700}
+
+  /* option cards */
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .opt{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 15px;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:var(--green)}
+  .opt.on{border-color:var(--green);background:var(--sel)}
+  .opt .ck{width:22px;height:22px;border-radius:7px;flex:0 0 auto;border:2px solid var(--line);display:grid;place-items:center;color:transparent;font-weight:800;font-size:13px}
+  .opt.on .ck{background:var(--green);border-color:var(--green);color:#fff}
+  .opt .r{font-family:var(--serif);font-size:22px;color:var(--green);line-height:1;width:92px}
+  .opt .r small{font-family:var(--sans);font-size:11px;color:var(--soft);display:block;font-weight:600;margin-top:2px}
+  .opt .d{flex:1;min-width:0}
+  .opt .d b{font-size:13px;font-weight:650;display:flex;align-items:center;gap:6px}
+  .opt .d span{font-size:11.5px;color:var(--soft)}
+  .opt .pi{text-align:right;font-variant-numeric:tabular-nums}
+  .opt .pi b{font-size:16px;color:var(--ink)}
+  .opt .pi span{font-size:10.5px;color:var(--faint);display:block}
+  .badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--pref);background:var(--pref-soft);padding:2px 7px;border-radius:999px;display:inline-flex;align-items:center;gap:3px}
+
+  /* proposal preview */
+  .prop{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .prop .ph{background:linear-gradient(135deg,var(--green),var(--green-ink));color:#fff;padding:15px 16px}
+  .prop .ph .lo{display:flex;align-items:center;gap:10px}
+  .prop .ph .lo .a{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-family:var(--serif)}
+  .prop .ph .lo b{font-size:14px} .prop .ph .lo span{font-size:11px;color:rgba(255,255,255,.85);display:block}
+  .prop .ph h3{font-family:var(--serif);font-size:17px;margin:12px 0 2px}
+  .prop .ph p{font-size:12px;color:rgba(255,255,255,.9);margin:0}
+  .prop .pb{padding:14px 16px;background:var(--surface)}
+  .mini{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .mini:last-child{border-bottom:none}
+  .mini .lft b{font-family:var(--serif);color:var(--green);font-size:16px}
+  .mini .lft span{color:var(--soft);margin-left:8px}
+  .mini .rgt{font-variant-numeric:tabular-nums;font-weight:650}
+  .expiry{font-size:11px;color:var(--faint);margin-top:11px;display:flex;align-items:center;gap:6px}
+
+  /* thread */
+  .thread{display:flex;flex-direction:column;gap:11px}
+  .bub{max-width:78%;padding:11px 14px;border-radius:15px;font-size:13px;line-height:1.45}
+  .bub.lo{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:5px}
+  .bub.bo{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .bub .meta{font-size:10px;opacity:.75;margin-top:5px}
+  .evt{align-self:center;font-size:11px;font-weight:700;color:var(--good);background:var(--good-soft);padding:5px 12px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+
+  /* phone */
+  .phone{width:250px;max-width:100%;background:var(--ink);border-radius:34px;padding:9px;box-shadow:0 24px 50px -26px rgba(0,0,0,.5)}
+  .pscreen{background:var(--bg);border-radius:26px;overflow:hidden;height:430px;display:flex;flex-direction:column}
+  .ptop{background:linear-gradient(135deg,var(--green),var(--green-ink));color:#fff;padding:14px 15px 13px}
+  .ptop .b{font-family:var(--serif);font-size:15px;display:flex;align-items:center;gap:7px}
+  .ptop .s{font-size:11px;color:rgba(255,255,255,.85);margin-top:3px}
+  .pbody{flex:1;overflow:auto;padding:13px}
+  .pempty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--faint);gap:10px;padding:20px}
+  .pempty svg{opacity:.5}
+  .pcard{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px;animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+  .pcard .lbl{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .pcard h4{font-family:var(--serif);margin:5px 0 8px;font-size:14px}
+  .pcard .po{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .pcard .po:last-of-type{border-bottom:none}
+  .pcard .po b{color:var(--green);font-family:var(--serif);font-size:14px}
+  .pcard .po.on{background:var(--sel);margin:0 -6px;padding:7px 6px;border-radius:8px}
+  .pact{display:flex;gap:8px;margin-top:11px}
+  .pact button{flex:1;border:none;border-radius:10px;font-family:var(--sans);font-weight:700;font-size:12px;padding:9px;cursor:pointer}
+  .pact .acc{background:var(--green);color:#fff}
+  .pact .dec{background:var(--surface-2);color:var(--soft)}
+  .pnote{font-size:10.5px;color:var(--faint);text-align:center;margin-top:9px}
+
+  /* action bar */
+  .bar{border-top:1px solid var(--line);background:var(--surface);padding:13px 18px;display:flex;align-items:center;gap:12px}
+  .bar .hint{flex:1;font-size:12px;color:var(--soft)}
+  .go{border:none;background:var(--green);color:#fff;font-family:var(--sans);font-weight:700;font-size:13.5px;padding:12px 20px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .go:hover{filter:brightness(1.06)}
+  .go.ghost{background:var(--surface-2);color:var(--ink)}
+  .toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(18px);background:var(--green-ink);color:#fff;font-weight:650;font-size:13px;padding:11px 18px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:5}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stepper" id="stepper"></div>
+  <div class="stage">
+    <div class="desk" id="desk"></div>
+    <div class="rail" id="rail"></div>
+  </div>
+  <div class="bar">
+    <div class="hint" id="hint"></div>
+    <button class="go ghost" id="back" style="display:none">Back</button>
+    <button class="go" id="go"></button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var STEPS=["Inbox","Price","Compose","Sent","Accepted"];
+  var step=0;
+
+  var OPTS=[
+    {r:"6.125%",inv:"Pennymac",pref:true,term:"30-yr fixed",pi:"$2,916",note:"$1,900 lender credit"},
+    {r:"5.875%",inv:"United Wholesale",pref:true,term:"30-yr fixed",pi:"$2,840",note:"0.75 pts · $3,600"},
+    {r:"5.990%",inv:"Newrez",pref:false,term:"30-yr fixed",pi:"$2,875",note:"par · no points"}
+  ];
+  var chosen=[0,1,2];      // options included in the proposal
+  var accepted=1;          // borrower accepts Option B (index 1)
+
+  function badge(){return '<span class="badge"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.7L12 17.3 5.8 20.8l1.6-6.7L2.2 8.9l6.9-.6z"/></svg>Preferred</span>';}
+
+  function renderStepper(){
+    $("#stepper").innerHTML=STEPS.map(function(s,i){
+      var cls=i<step?"done":i===step?"now":"";
+      var line=i<STEPS.length-1?'<span class="line"></span>':'';
+      return '<div class="stp '+cls+'"><span class="n">'+(i<step?'✓':(i+1))+'</span><span class="t">'+s+'</span>'+line+'</div>';
+    }).join("");
+  }
+
+  function optRow(o,i,clickable){
+    return '<div class="opt'+(chosen.indexOf(i)>-1?' on':'')+'" data-i="'+i+'"'+(clickable?'':' style="cursor:default"')+'>'+
+      (clickable?'<div class="ck">✓</div>':'')+
+      '<div class="r">'+o.r+'<small>'+o.term+'</small></div>'+
+      '<div class="d"><b>'+o.inv+(o.pref?' '+badge():'')+'</b><span>'+o.note+'</span></div>'+
+      '<div class="pi"><b>'+o.pi+'</b><span>/ mo P&amp;I</span></div>'+
+    '</div>';
+  }
+
+  function renderDesk(){
+    var d=$("#desk");
+    if(step===0){
+      d.innerHTML='<div class="kick">Scenario inbox</div><h2 class="t">3 borrower requests waiting</h2>'+
+        '<div class="inbox">'+
+          '<div class="scn hot" data-open="1"><div class="av">MO</div><div class="m"><b>Maria &amp; Luis Ortega <span class="tag new">New</span></b><span>Rate/term refinance · $480,000 · asked for a better rate</span></div><div class="when">2m ago</div></div>'+
+          '<div class="scn"><div class="av" style="background:#4C7BB0">DP</div><div class="m"><b>Dana Park</b><span>Purchase · $725,000 · pre-approval pricing</span></div><div class="when">1h ago</div></div>'+
+          '<div class="scn"><div class="av" style="background:#8B6B00">RS</div><div class="m"><b>Ray Suggs <span class="tag wait">Awaiting reply</span></b><span>Cash-out refi · $310,000 · quote sent yesterday</span></div><div class="when">1d ago</div></div>'+
+        '</div>';
+      d.querySelectorAll("[data-open]").forEach(function(el){el.addEventListener("click",function(){next()})});
+    }
+    else if(step===1){
+      d.innerHTML='<div class="kick">Ortega refinance · price it</div><h2 class="t">Live pricing for this scenario</h2>'+
+        '<div class="card"><div class="facts">'+
+          '<div class="fact"><span>Loan</span><b>$480,000</b></div>'+
+          '<div class="fact"><span>Value / LTV</span><b>$610k · 79%</b></div>'+
+          '<div class="fact"><span>FICO</span><b>748</b></div>'+
+        '</div>'+
+        '<div class="quote-in">“Rates dropped since we closed — can you beat our current <b>7.10%</b>?” <br>— Maria O.</div></div>'+
+        '<div class="kick" style="color:var(--faint)">Top options from Best Pricing · tap to include in the proposal</div>'+
+        '<div class="opts" id="opts">'+OPTS.map(function(o,i){return optRow(o,i,true)}).join("")+'</div>';
+      d.querySelectorAll(".opt").forEach(function(el){el.addEventListener("click",function(){
+        var i=+el.getAttribute("data-i");var k=chosen.indexOf(i);
+        if(k>-1){if(chosen.length>1)chosen.splice(k,1);}else chosen.push(i);
+        el.classList.toggle("on",chosen.indexOf(i)>-1);updateGo();
+      })});
+    }
+    else if(step===2){
+      d.innerHTML='<div class="kick">Compose &amp; review</div><h2 class="t">Branded proposal · ready to send</h2>'+
+        '<div class="prop">'+
+          '<div class="ph"><div class="lo"><span class="a">JC</span><span><b>Jordan Cole</b><span>Loan Officer · NMLS #1184402 · TriValley Home Loans</span></span></div>'+
+          '<h3>Your refinance options, Maria &amp; Luis</h3><p>Three ways to beat your current 7.10% — pick the one that fits.</p></div>'+
+          '<div class="pb">'+chosen.slice().sort(function(a,b){return a-b}).map(function(i){var o=OPTS[i];
+            return '<div class="mini"><div class="lft"><b>'+o.r+'</b><span>'+o.inv+' · '+o.term+'</span></div><div class="rgt">'+o.pi+' /mo</div></div>';
+          }).join("")+
+          '<div class="expiry"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Pricing valid through 5:00 PM today · '+chosen.length+' option'+(chosen.length>1?'s':'')+' included</div>'+
+          '</div>'+
+        '</div>';
+    }
+    else if(step===3){
+      d.innerHTML='<div class="kick">One thread · both sides see it</div><h2 class="t">Proposal sent to the Ortegas</h2>'+
+        '<div class="thread">'+
+          '<div class="bub lo">Sent you 3 refinance options — all beat your current 7.10%. Take a look and tap Accept on the one you like.<div class="meta">You · just now · Delivered ✓</div></div>'+
+          '<div class="evt"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> Proposal delivered to borrower portal + SMS</div>'+
+        '</div>';
+    }
+    else{
+      d.innerHTML='<div class="kick">Loop closed</div><h2 class="t">Accepted — Option B locked</h2>'+
+        '<div class="thread">'+
+          '<div class="bub lo">Sent you 3 refinance options — all beat your current 7.10%.<div class="meta">You · 2m ago · Read ✓</div></div>'+
+          '<div class="bub bo">Option B looks perfect — the UWM 5.875%. Let’s lock it in.<div class="meta">Maria O. · just now</div></div>'+
+          '<div class="evt"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> Option B accepted · 5.875% · United Wholesale</div>'+
+        '</div>'+
+        '<div class="card" style="margin-top:14px"><div class="facts">'+
+          '<div class="fact"><span>New rate</span><b style="color:var(--green)">5.875%</b></div>'+
+          '<div class="fact"><span>Saves / mo</span><b>~$310</b></div>'+
+          '<div class="fact"><span>Status</span><b>→ Processing</b></div>'+
+        '</div></div>';
+    }
+  }
+
+  function renderRail(){
+    var r=$("#rail");
+    if(step<3){
+      r.innerHTML='<div class="phone"><div class="pscreen">'+
+        '<div class="ptop"><div class="b">Ortega portal</div><div class="s">borrower.trivalley.com</div></div>'+
+        '<div class="pbody"><div class="pempty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><div>No new quotes yet</div><div style="font-size:10.5px">The borrower sees your proposal here the moment you send it.</div></div></div>'+
+      '</div></div><div class="pnote">Borrower&rsquo;s live view</div>';
+    } else {
+      var accCls=step>=4;
+      r.innerHTML='<div class="phone"><div class="pscreen">'+
+        '<div class="ptop"><div class="b">Ortega portal</div><div class="s">New proposal from Jordan</div></div>'+
+        '<div class="pbody"><div class="pcard">'+
+          '<div class="lbl">Refinance proposal</div><h4>Beat your 7.10%</h4>'+
+          OPTS.map(function(o,i){return '<div class="po'+(accCls&&i===accepted?' on':'')+'"><span>'+o.r+' · '+o.inv+'</span><b>'+o.pi+'</b></div>'}).join("")+
+          (accCls
+            ? '<div class="evt" style="width:100%;justify-content:center;margin-top:11px">Option B accepted ✓</div>'
+            : '<div class="pact"><button class="dec">Decline</button><button class="acc" id="pacc">Accept Option B</button></div>')+
+        '</div></div>'+
+      '</div></div><div class="pnote">Borrower&rsquo;s live view</div>';
+      var pacc=document.getElementById("pacc");
+      if(pacc)pacc.addEventListener("click",function(){next()});
+    }
+  }
+
+  var HINTS=[
+    "A new borrower request just arrived. Open it to price.",
+    "These came straight from Best Pricing. Adjust which options to include, then compose.",
+    "Review the branded proposal. When it looks right, send it.",
+    "Delivered to the borrower's portal and phone. Now it's their move.",
+    "Accepted — the whole exchange stayed in one thread. Replay any time."
+  ];
+  var GO=["Open scenario","Compose proposal","Send to borrower","Waiting on borrower…","Start over"];
+
+  function updateGo(){
+    $("#go").textContent=GO[step];
+    $("#hint").textContent=HINTS[step];
+    $("#back").style.display=(step>0&&step<4)?"inline-flex":"none";
+    $("#go").classList.toggle("ghost",step===3);
+  }
+
+  var tt;function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show")},2500);}
+
+  function render(){renderStepper();renderDesk();renderRail();updateGo();}
+  function next(){
+    if(step===2)toast("Proposal sent · delivered to borrower portal + SMS");
+    if(step===4){step=0;chosen=[0,1,2];render();return;}
+    if(step===3){step=4;render();toast("Borrower accepted Option B 🎉");return;}
+    step++;render();
+  }
+  $("#go").addEventListener("click",next);
+  $("#back").addEventListener("click",function(){if(step>0){step--;render();}});
+
+  window.addEventListener("message",function(e){if(e.data&&"tvhlTheme" in e.data){var t=e.data.tvhlTheme;if(t)document.documentElement.setAttribute("data-theme",t);else document.documentElement.removeAttribute("data-theme");}});
+
+  render();
+})();
+</script>
+</body>
+</html>
