@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TVHL — Identity Console</title>
+<style>
+  :root{
+    --bg:#F5F6F4; --surface:#FFFFFF; --surface-2:#EEF3E8; --ink:#26282B; --soft:#5A6152; --faint:#8A9082;
+    --line:#E1E7DB; --green:#256521; --green-ink:#1A3A16; --bright:#8BC638;
+    --good:#16A34A; --good-soft:#E4F2DC; --warn:#B26A00; --warn-soft:#FBF0D0; --danger:#C0392B; --danger-soft:#F7E1DD;
+    --rust:#B4531F; --rust-soft:#FBEEE2; --purple:#5B44B8; --purple-soft:#EAE5FB; --info:#2A6AA6; --info-soft:#E1EDF7;
+    --sel:#E8F1DF; --side:#12210E;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0C110A; --surface:#141A11; --surface-2:#1B2415; --ink:#EDF1EA; --soft:#A6AE9B; --faint:#6E7563;
+    --line:#26301F; --green:#8BC638; --green-ink:#B6E06A; --bright:#8BC638;
+    --good:#5CC08C; --good-soft:#173021; --warn:#E9C766; --warn-soft:#2C2410; --danger:#E4685C; --danger-soft:#38201C;
+    --rust:#E0894F; --rust-soft:#2C2013; --purple:#B9A7F0; --purple-soft:#221B3A; --info:#6FA8DC; --info-soft:#122436;
+    --sel:#20301A; --side:#0A130A;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0C110A; --surface:#141A11; --surface-2:#1B2415; --ink:#EDF1EA; --soft:#A6AE9B; --faint:#6E7563;
+    --line:#26301F; --green:#8BC638; --green-ink:#B6E06A; --bright:#8BC638;
+    --good:#5CC08C; --good-soft:#173021; --warn:#E9C766; --warn-soft:#2C2410; --danger:#E4685C; --danger-soft:#38201C;
+    --rust:#E0894F; --rust-soft:#2C2013; --purple:#B9A7F0; --purple-soft:#221B3A; --info:#6FA8DC; --info-soft:#122436;
+    --sel:#20301A; --side:#0A130A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;font-size:13px}
+  .app{display:flex;height:100vh;min-height:640px}
+  .side{width:206px;flex:0 0 auto;background:var(--side);color:#EAF1E6;padding:14px 11px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+  @media(max-width:760px){.side{width:58px}.side .brand .tt,.side .nav b .lb,.side .nav b .ct,.side .who{display:none}}
+  .side .brand{display:flex;align-items:center;gap:9px;padding:5px 7px 6px}
+  .side .brand .tt{line-height:1.1}
+  .side .brand .tt b{font-family:var(--serif);font-size:15px;display:block}
+  .side .brand .tt span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8FA085}
+  .side .nav b{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;font-weight:600;font-size:12.5px;color:#C4D2BC;cursor:pointer;transition:.12s}
+  .side .nav b:hover{background:rgba(255,255,255,.06);color:#fff}
+  .side .nav b.on{background:var(--green);color:#fff}
+  .side .nav b svg{flex:0 0 auto}
+  .side .nav b .lb{flex:1}
+  .side .nav b .ct{font-size:10.5px;font-weight:700;opacity:.7;font-variant-numeric:tabular-nums}
+  .side .who{margin-top:auto;font-size:10.5px;color:#8FA085;padding:9px 7px 2px;border-top:1px solid rgba(255,255,255,.08)}
+  .side .who b{color:#fff;font-size:11.5px;display:block}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .hd{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--surface);display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  .hd h1{font-family:var(--serif);font-size:19px;margin:0;display:flex;align-items:baseline;gap:9px}
+  .hd h1 em{font-style:normal;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--faint)}
+  .hd p{margin:3px 0 0;font-size:12px;color:var(--soft)}
+  .body{flex:1;overflow:auto;padding:16px 20px 22px}
+  .view{display:none}.view.on{display:block;animation:f .2s ease}
+  @keyframes f{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  /* chips / pills */
+  .pchip{font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .p-lo{background:var(--sel);color:var(--green-ink)} .p-cust{background:var(--rust-soft);color:var(--rust)} .p-con{background:var(--purple-soft);color:var(--purple)}
+  .pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .ok{background:var(--good-soft);color:var(--good)} .warn{background:var(--warn-soft);color:var(--warn)}
+  .bad{background:var(--danger-soft);color:var(--danger)} .info{background:var(--info-soft);color:var(--info)} .mut{background:var(--surface-2);color:var(--faint)}
+  .tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#8B6B00;background:#FBF0D0;padding:2px 7px;border-radius:999px}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag{color:#E9C766;background:#2C2410}}
+  :root[data-theme="dark"] .tag{color:#E9C766;background:#2C2410}
+
+  table{width:100%;border-collapse:collapse}
+  th{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 11px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+  tr:hover td{background:var(--surface-2)}
+  .mono{font-family:var(--mono);font-size:11px;color:var(--soft)}
+
+  /* users */
+  .ugrid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+  @media(max-width:840px){.ugrid{grid-template-columns:1fr}}
+  .filters{display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap}
+  .filters button{border:1px solid var(--line);background:var(--surface);color:var(--soft);font-family:var(--sans);font-size:11.5px;font-weight:650;padding:6px 12px;border-radius:999px;cursor:pointer}
+  .filters button.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .urow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:10px 4px;cursor:pointer;font-family:var(--sans);color:var(--ink)}
+  .urow:hover{background:var(--surface-2)}
+  .urow.sel{background:var(--sel)}
+  .av{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;color:#fff;font-family:var(--serif);font-weight:600;font-size:14px}
+  .urow .nm{flex:1;min-width:0}
+  .urow .nm b{font-weight:650;font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .urow .nm span{font-size:11px;color:var(--soft);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .urow .rt{text-align:right;flex:0 0 auto}
+  .urow .rt .last{font-size:10.5px;color:var(--faint);display:block;margin-top:4px}
+
+  .detail{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;position:sticky;top:0;align-self:start}
+  .detail .dh{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+  .detail .dh b{font-size:15px;font-family:var(--serif)}
+  .detail .dh span{font-size:11px;color:var(--soft);display:block}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .kv:last-of-type{border-bottom:none}
+  .kv span{color:var(--soft)} .kv b{text-align:right;font-weight:600}
+  .dlab{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);margin:13px 0 7px}
+  .acc{font-size:11.5px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .acc:last-child{border-bottom:none}
+  .acc .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .acc .note{color:var(--soft);font-size:11px;margin-top:2px}
+  .ses{font-size:11px;color:var(--soft);padding:5px 0;display:flex;gap:9px}
+  .ses time{color:var(--faint);flex:0 0 84px;font-variant-numeric:tabular-nums}
+
+  /* portal cards */
+  .portals{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  @media(max-width:840px){.portals{grid-template-columns:1fr}}
+  .pcard{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+  .pcard .ph{padding:13px 15px;color:#fff}
+  .pcard.lo .ph{background:linear-gradient(135deg,var(--green),var(--green-ink))}
+  .pcard.cust .ph{background:linear-gradient(135deg,#C46A3A,#8F3E13)}
+  .pcard.con .ph{background:linear-gradient(135deg,#6A57C4,#40356B)}
+  .pcard .ph b{font-family:var(--serif);font-size:16px} .pcard .ph span{font-size:11px;opacity:.9;display:block;margin-top:2px}
+  .pcard .pb{padding:13px 15px}
+  .prow{padding:9px 0;border-bottom:1px solid var(--line)}
+  .prow:last-child{border-bottom:none}
+  .prow .k{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .prow .v{font-size:12.5px;margin-top:3px}
+  .prow .v .mono{font-size:11px}
+
+  /* grants term */
+  .term{font-variant-numeric:tabular-nums;font-size:12px}
+  .term .to{color:var(--soft)}
+
+  /* org */
+  .orgcards{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+  @media(max-width:760px){.orgcards{grid-template-columns:1fr}}
+  .bc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px}
+  .bc .bt{display:flex;justify-content:space-between;align-items:flex-start}
+  .bc .bt b{font-family:var(--serif);font-size:16px} .bc .bt span{font-size:11px;color:var(--soft);display:block}
+  .bc .stats{display:flex;gap:18px;margin-top:11px}
+  .bc .stats .s b{font-family:var(--serif);font-size:20px;color:var(--green);display:block;line-height:1}
+  .bc .stats .s span{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.4px}
+  .states{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+  .st{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:7px;background:var(--surface-2);color:var(--soft)}
+
+  /* licensing */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 13px;font-size:11.5px;color:var(--soft)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .lg-lic{background:var(--sel);border:1px solid var(--green)} .lg-dscr{background:var(--warn-soft);border:1px solid var(--warn)}
+  .stategrid{display:flex;flex-wrap:wrap;gap:6px}
+  .scell{font-size:11px;font-weight:650;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+  .scell.lic{background:var(--sel);border-color:var(--green);color:var(--green-ink)}
+  .scell.dscr::after{content:"·D";font-size:9px;color:var(--warn);font-weight:800;margin-left:3px}
+  .note-box{background:var(--surface-2);border-radius:12px;padding:12px 14px;margin-top:14px;font-size:12px;color:var(--soft);line-height:1.5}
+  .note-box b{color:var(--ink)}
+
+  /* sessions */
+  .srow .dev{font-weight:650}
+  .revoke{border:1px solid var(--line);background:var(--surface);color:var(--danger);font-family:var(--sans);font-size:11px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer}
+  .revoke:hover{background:var(--danger-soft)}
+
+  /* audit */
+  .acats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+  .acats button{border:1px solid var(--line);background:var(--surface);color:var(--soft);font-family:var(--sans);font-size:11px;font-weight:650;padding:6px 11px;border-radius:999px;cursor:pointer}
+  .acats button.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .arow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:8px;cursor:pointer}
+  .arow .l1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .arow .l1 time{font-variant-numeric:tabular-nums;color:var(--faint);font-size:11px;flex:0 0 auto}
+  .arow .act{font-weight:650;font-size:12.5px}
+  .arow .l2{font-size:11.5px;color:var(--soft);margin-top:5px}
+  .cat{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:6px}
+  .c-Access{background:var(--good-soft);color:var(--good)} .c-Config{background:var(--info-soft);color:var(--info)}
+  .c-Identity{background:var(--purple-soft);color:var(--purple)} .c-Security{background:var(--danger-soft);color:var(--danger)} .c-Data{background:var(--warn-soft);color:var(--warn)}
+  .changes{margin-top:10px;border-top:1px dashed var(--line);padding-top:9px;display:none}
+  .arow.open .changes{display:block}
+  .chg{display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0;font-variant-numeric:tabular-nums}
+  .chg .fld{font-family:var(--mono);color:var(--soft);flex:0 0 auto}
+  .chg .from{color:var(--faint);text-decoration:line-through} .chg .to{color:var(--green);font-weight:650}
+  .chg .arr{color:var(--faint)}
+
+  .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%) translateY(16px);background:var(--green-ink);color:#fff;font-weight:650;font-size:12.5px;padding:10px 16px;border-radius:11px;opacity:0;transition:.25s;pointer-events:none;z-index:5}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg width="26" height="26" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="24" fill="#256521"/><path d="M18 72 L40 36 L56 56 L72 32 L86 72 Z" fill="none" stroke="#8BC638" stroke-width="9" stroke-linejoin="round"/></svg><div class="tt"><b>TVHL</b><span>Identity Console</span></div></div>
+    <div class="nav" id="nav"></div>
+    <div class="who">Signed in as<b>Ravi Kambli</b>Super admin · MFA verified</div>
+  </aside>
+  <div class="main">
+    <div class="hd"><div id="hdtext"></div></div>
+    <div class="body" id="body"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var GREEN="#256521";
+  var PORTAL={lo:{s:"LO",n:"Loan Officer Portal",c:"p-lo"},cust:{s:"Customer",n:"Customer Portal",c:"p-cust"},con:{s:"Console",n:"Admin Console",c:"p-con"}};
+  function avColor(i){return ["#256521","#4C7BB0","#B4531F","#5B44B8","#0E9488","#8B6B00","#C0508A"][i%7];}
+  function initials(n){return n.split(" ").map(function(w){return w[0]}).slice(0,2).join("");}
+  function pchip(p){return '<span class="pchip '+PORTAL[p].c+'">'+PORTAL[p].s+'</span>';}
+
+  var USERS=[
+    {id:"usr_8f21c4",name:"Dana Whitfield",email:"dana.whitfield@trivalleyhomeloans.com",portals:["lo","con"],auth:"SSO · Entra ID",verified:"email + sms",last:"4m ago",role:"Loan officer · NMLS 218844",status:"Active",sp:"ok",
+      access:[["Loan Officer Portal","Domain match · trivalleyhomeloans.com","Granted","ok"],["Admin Console","Pricing admin · MFA enforced","Granted","ok"],["Customer Portal","Read-only impersonation","On request","info"]],
+      sessions:[["14:02 today","SSO → Console (silent from LO Portal)"],["09:41 today","Entra ID sign-in · Pleasanton, CA"],["Aug 6","Password reset via IdP"]]},
+    {id:"usr_4b90de",name:"Marcus Oyelaran",email:"marcus.o@trivalleyhomeloans.com",portals:["lo"],auth:"SSO · Entra ID",verified:"email + sms",last:"22m ago",role:"Processor",status:"Active",sp:"ok",
+      access:[["Loan Officer Portal","Domain match · trivalleyhomeloans.com","Granted","ok"],["Admin Console","Not an admin group member","Blocked","bad"]],
+      sessions:[["13:40 today","Entra ID sign-in · Oakland, CA"],["Aug 7","Console access denied (no group)"]]},
+    {id:"usr_71aa02",name:"Priya Raghunathan",email:"priya.r@gmail.com",portals:["cust"],auth:"SSO · Google",verified:"email only",last:"1h ago",role:"Borrower · Loan #24-10882",status:"Phone unverified",sp:"warn",
+      access:[["Customer Portal","Any domain accepted","Granted","ok"]],
+      sessions:[["12:55 today","Google SSO · email trusted from assertion"],["12:56 today","OTP requested — not completed"]]},
+    {id:"usr_33fe17",name:"Elliot Bergström",email:"e.bergstrom@outlook.com",portals:["cust"],auth:"Email + OTP",verified:"email + sms",last:"3h ago",role:"Co-borrower · Loan #24-10882",status:"Active",sp:"ok",
+      access:[["Customer Portal","Any domain accepted","Granted","ok"]],
+      sessions:[["10:12 today","Magic link + SMS code"],["Aug 5","E-signed disclosures"]]},
+    {id:"usr_5c0b88",name:"Sofia Márquez",email:"sofia.marquez@trivalleyhomeloans.com",portals:["lo","cust","con"],auth:"SSO · Entra ID",verified:"email + sms",last:"Yesterday",role:"Branch manager",status:"Active",sp:"ok",
+      access:[["Loan Officer Portal","Domain match","Granted","ok"],["Customer Portal","Support impersonation, audited","Granted","ok"],["Admin Console","User admin","Granted","ok"]],
+      sessions:[["Aug 8","Console → LO Portal (silent)"],["Aug 8","Impersonated usr_71aa02 (12 min)"]]},
+    {id:"usr_9d4471",name:"Tomas Nkemdirim",email:"tomas@nkemdirim.co",portals:["cust"],auth:"Email + OTP",verified:"email + sms",last:"Aug 7",role:"Borrower · Loan #24-11004",status:"Active",sp:"ok",
+      access:[["Customer Portal","Any domain accepted","Granted","ok"]],
+      sessions:[["Aug 7","SMS code · San Jose, CA"]]},
+    {id:"usr_20c6f5",name:"Hannah Ruiz",email:"hannah.ruiz@tvhlwholesale.com",portals:[],auth:"Blocked",verified:"pending",last:"—",role:"Loan officer (new domain)",status:"Domain not allowlisted",sp:"bad",
+      access:[["Loan Officer Portal","tvhlwholesale.com not in allowlist","Blocked","bad"]],
+      sessions:[["11:20 today","Sign-in refused — domain rule"]]}
+  ];
+  var GRANTS=[
+    ["Dana Whitfield","lo","LO User","Pleasanton, CA · CA, NV, AZ","Jan 3, 2025","No end date","Active","ok"],
+    ["Dana Whitfield","con","Display User","Company · pricing screens","Aug 1, 2026","Aug 31, 2026","Expires in 22d","warn"],
+    ["Sofia Márquez","lo","LO Manager","Frisco, TX","Mar 15, 2026","Mar 15, 2027","Active","ok"],
+    ["Sofia Márquez","con","Admin User","Company","Mar 15, 2026","Mar 15, 2027","Active","ok"],
+    ["Marcus Oyelaran","lo","LO User","Frisco, TX · processing queue","Feb 2, 2026","Aug 14, 2026","Expires in 5d","warn"],
+    ["Priya Raghunathan","cust","Borrower","Loan #24-10882","Jul 28, 2026","At funding + 90d","Active","ok"],
+    ["Elliot Bergström","cust","Co-Borrower","Loan #24-10882","Jul 28, 2026","At funding + 90d","Active","ok"],
+    ["Angela Chen","cust","Title Holder Only","Loan #24-11004","Aug 2, 2026","At closing","Active","ok"],
+    ["Hannah Ruiz","lo","LO User","Tampa, FL","Aug 12, 2026","Aug 12, 2027","Scheduled","info"],
+    ["Ray Boedecker","con","Admin User","Company · migration window","Jun 1, 2026","Jul 31, 2026","Expired","mut"]
+  ];
+  var PORTAL_SSO=[
+    {k:"lo",cls:"lo",name:"Loan Officer Portal",who:"Employees — loan officers & processors",rows:[
+      ["Sign-in","SSO · Microsoft Entra ID"],["Domain rule","Allowlisted corporate domains only — <span class='mono'>trivalleyhomeloans.com</span>. Add domains as config, no deploy."],["Factors","SSO assertion + one-time code still required"],["Provisioning","SCIM — accounts join and leave with the directory"]]},
+    {k:"cust",cls:"cust",name:"Customer Portal",who:"Borrowers, co-borrowers & title holders",rows:[
+      ["Sign-in","Google · Apple · or Email magic link + SMS"],["Domain rule","Any email domain accepted"],["Factors","Email trusted from the SSO assertion; phone verified by OTP"],["Provisioning","Open registration, scoped to a single loan file"]]},
+    {k:"con",cls:"con",name:"Admin Console",who:"Internal administrators only",rows:[
+      ["Sign-in","SSO · Entra ID + admin group membership"],["Domain rule","<span class='mono'>trivalleyhomeloans.com</span> only — locked"],["Factors","MFA / hardware key enforced on every new session"],["Provisioning","Group-gated — no self-service"]]}
+  ];
+  var BRANCHES=[
+    {id:"BR-01",name:"Pleasanton, CA",label:"Headquarters",nmls:"1998221",officers:14,states:["CA","NV","OR","WA","ID"]},
+    {id:"BR-02",name:"Scottsdale, AZ",label:"Southwest",nmls:"2214560",officers:8,states:["AZ","NM","UT","CO"]},
+    {id:"BR-03",name:"Frisco, TX",label:"South Central",nmls:"2318877",officers:11,states:["TX","OK","LA","AR","TN"]},
+    {id:"BR-04",name:"Tampa, FL",label:"Southeast",nmls:"2402913",officers:6,states:["FL","GA","SC","NC","AL"]}
+  ];
+  var STATE_NAMES={AL:"Alabama",AR:"Arkansas",AZ:"Arizona",CA:"California",CO:"Colorado",DE:"Delaware",FL:"Florida",GA:"Georgia",IA:"Iowa",ID:"Idaho",IN:"Indiana",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",MO:"Missouri",MS:"Mississippi",MT:"Montana",NC:"North Carolina",NM:"New Mexico",NV:"Nevada",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",SC:"South Carolina",TN:"Tennessee",TX:"Texas",UT:"Utah",WA:"Washington",WI:"Wisconsin"};
+  var DSCR_STATES=["AL","AR","CO","DE","FL","GA","IN","IA","KS","KY","LA","MO","MS","MT","NM","OH","OK","PA","SC","TN","TX","WI"];
+  var INVESTORS=[
+    ["Cardinal Capital Partners","Preferred","ok","Agency · Conforming, High balance","All licensed states","No","Best-efforts · 30-day locks"],
+    ["Sierra Point Funding","Preferred","ok","Non-QM · Bank statement, P&L","16 of 18","Yes","Min FICO 660 · DSCR ≥ 1.00"],
+    ["Meridian DSCR Capital","Preferred","ok","DSCR · 1–8 unit investor","All 22 DSCR states","Yes","No license required · entity vesting"],
+    ["Harbor Ridge Mortgage","Approved","info","Jumbo · Portfolio ARM","CA, WA, OR, CO","No","Min FICO 720 · 12-mo reserves"],
+    ["Copper Basin Investors","Paused","mut","DSCR · Short-term rental","TX, TN, FL","Yes","Paused Jul 2026 — pricing review"]
+  ];
+  var SESSIONS=[
+    ["Dana Whitfield","con","Chrome 140 · macOS 15","14:02 today","MFA 13:58","Pleasanton, CA"],
+    ["Sofia Márquez","lo","Edge 139 · Windows 11","13:52 today","MFA 13:44","Frisco, TX"],
+    ["Priya Raghunathan","cust","Safari 18 · iOS 19","12:55 today","Google SSO","San Jose, CA"],
+    ["Marcus Oyelaran","lo","Chrome 140 · Windows 11","13:40 today","Entra ID","Oakland, CA"],
+    ["Ravi Kambli","con","Chrome 140 · macOS 15","just now","Hardware key","Pleasanton, CA"]
+  ];
+  var AUDIT=[
+    {t:"Aug 9 · 14:07 PDT",actor:"Ravi Kambli",role:"Super admin",portal:"con",cat:"Access",action:"Granted role",target:"Hannah Ruiz · usr_20c6f5",
+      ch:[["roles.lo","—","LO User"],["grant.scope","—","Tampa, FL (BR-04)"],["grant.term","—","Aug 12, 2026 → Aug 12, 2027"]]},
+    {t:"Aug 9 · 13:52 PDT",actor:"Sofia Márquez",role:"Admin User",portal:"con",cat:"Config",action:"Added allowed domain",target:"Loan Officer Portal",
+      ch:[["portal.lo.domains","trivalleyhomeloans.com","+ tvhlwholesale.com"]]},
+    {t:"Aug 9 · 13:20 PDT",actor:"System",role:"Scheduled job",portal:"con",cat:"Access",action:"Expired grant automatically",target:"Ray Boedecker · Admin User",
+      ch:[["grant.status","Active","Expired"],["session.revoked","0","2"]]},
+    {t:"Aug 9 · 12:56 PDT",actor:"Priya Raghunathan",role:"Borrower",portal:"cust",cat:"Identity",action:"Requested phone verification code",target:"usr_71aa02",
+      ch:[["phone.otpRequested","never","Aug 9 12:56"]]},
+    {t:"Aug 9 · 11:20 PDT",actor:"Hannah Ruiz",role:"Loan officer",portal:"lo",cat:"Security",action:"Sign-in refused — domain not allowlisted",target:"hannah.ruiz@tvhlwholesale.com",
+      ch:[["auth.result","—","denied · domain_rule"]]},
+    {t:"Aug 8 · 17:44 PDT",actor:"Sofia Márquez",role:"Admin User",portal:"con",cat:"Security",action:"Started impersonation",target:"Priya Raghunathan · usr_71aa02",
+      ch:[["impersonation.active","false","true"],["impersonation.duration","—","12m 04s"],["impersonation.reason","—","Support ticket #4471"]]},
+    {t:"Aug 8 · 15:02 PDT",actor:"Ravi Kambli",role:"Super admin",portal:"con",cat:"Config",action:"Edited investor tags",target:"Copper Basin Investors",
+      ch:[["investor.tier","Approved","Paused"]]},
+    {t:"Aug 8 · 09:31 PDT",actor:"Marcus Oyelaran",role:"Processor",portal:"lo",cat:"Data",action:"Changed borrower contact record",target:"Loan #24-10882 · Elliot Bergström",
+      ch:[["contact.phone","(925) 555-0264","(925) 555-0290"]]}
+  ];
+
+  var NAV=[
+    ["users","Users","1,482"],["portals","Portals & SSO","3"],["roles","Roles & grants","8"],
+    ["org","Org & branches","4"],["licensing","Licensing","30"],["investors","Investors","5"],
+    ["sessions","Sessions","96"],["audit","Audit log","41.2k"]
+  ];
+  var HEAD={
+    users:["Users","Every human identity across all three portals","1,482 identities"],
+    portals:["Portals & SSO","How each portal authenticates — and who it lets in","3 portals"],
+    roles:["Roles & grants","Time-boxed, scoped access — not permanent permissions","8 active grants"],
+    org:["Org & branches","Branches, licensing footprint and assigned officers","4 branches"],
+    licensing:["Licensing","State coverage and the DSCR business-purpose exemption","30 states"],
+    investors:["Investors","Investor tiers, coverage and DSCR eligibility","5 investors"],
+    sessions:["Sessions","Live sign-ins across every portal, with MFA and device","96 active"],
+    audit:["Audit log","Every configuration, access and identity change — field by field","41.2k events"]
+  };
+  var ICON={
+    users:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="18" cy="9" r="2.2"/>',
+    portals:'<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>',
+    roles:'<path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    org:'<rect x="4" y="8" width="16" height="12" rx="1.5"/><path d="M9 8V4h6v4M9 13h.01M15 13h.01M9 17h.01M15 17h.01"/>',
+    licensing:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/>',
+    investors:'<path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.7L12 17.3 5.8 20.8l1.6-6.7L2.2 9.9l6.9-.6z"/>',
+    sessions:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    audit:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>'
+  };
+
+  var view="users", uFilter="all", uSel="usr_8f21c4", aCat="All";
+
+  function renderNav(){
+    $("#nav").innerHTML=NAV.map(function(n){
+      return '<b class="'+(view===n[0]?'on':'')+'" data-v="'+n[0]+'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[n[0]]+'</svg><span class="lb">'+n[1]+'</span><span class="ct">'+n[2]+'</span></b>';
+    }).join("");
+    $("#nav").querySelectorAll("b").forEach(function(b){b.addEventListener("click",function(){view=b.getAttribute("data-v");render();})});
+  }
+  function renderHead(){var h=HEAD[view];$("#hdtext").innerHTML='<h1>'+h[0]+' <em>'+h[2]+'</em></h1><p>'+h[1]+'</p>';}
+
+  function esc(s){return s;}
+
+  function vUsers(){
+    var list=uFilter==="all"?USERS:USERS.filter(function(u){return u.portals.indexOf(uFilter)>-1});
+    var sel=USERS.filter(function(u){return u.id===uSel})[0]||list[0];
+    var filters=[["all","All users"],["lo","LO Portal"],["cust","Customer"],["con","Console"]];
+    var rows=list.map(function(u,i){
+      return '<button class="urow'+(u.id===sel.id?' sel':'')+'" data-id="'+u.id+'">'+
+        '<span class="av" style="background:'+avColor(USERS.indexOf(u))+'">'+initials(u.name)+'</span>'+
+        '<span class="nm"><b>'+u.name+'</b><span>'+u.role+'</span></span>'+
+        '<span class="rt">'+(u.portals.length?u.portals.map(pchip).join(" "):'<span class="pill bad"><span class="d"></span>Blocked</span>')+'<span class="last">'+u.last+'</span></span>'+
+      '</button>';
+    }).join("");
+    var det='<div class="detail"><div class="dh"><span class="av" style="background:'+avColor(USERS.indexOf(sel))+';width:40px;height:40px">'+initials(sel.name)+'</span><div><b>'+sel.name+'</b><span>'+sel.email+'</span></div></div>'+
+      '<div class="kv"><span>Identity</span><b class="mono">'+sel.id+'</b></div>'+
+      '<div class="kv"><span>Sign-in</span><b>'+sel.auth+'</b></div>'+
+      '<div class="kv"><span>Verified</span><b>'+sel.verified+'</b></div>'+
+      '<div class="kv"><span>Status</span><b><span class="pill '+sel.sp+'"><span class="d"></span>'+sel.status+'</span></b></div>'+
+      '<div class="dlab">Portal access</div>'+
+      sel.access.map(function(a){return '<div class="acc"><div class="top"><b>'+a[0]+'</b><span class="pill '+a[3]+'"><span class="d"></span>'+a[2]+'</span></div><div class="note">'+a[1]+'</div></div>'}).join("")+
+      '<div class="dlab">Recent activity</div>'+
+      sel.sessions.map(function(s){return '<div class="ses"><time>'+s[0]+'</time><span>'+s[1]+'</span></div>'}).join("")+
+    '</div>';
+    return '<div class="filters">'+filters.map(function(f){return '<button class="'+(uFilter===f[0]?'on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>'}).join("")+'</div>'+
+      '<div class="ugrid"><div>'+rows+'</div>'+det+'</div>';
+  }
+
+  function vPortals(){
+    return '<div class="portals">'+PORTAL_SSO.map(function(p){
+      return '<div class="pcard '+p.cls+'"><div class="ph"><b>'+p.name+'</b><span>'+p.who+'</span></div><div class="pb">'+
+        p.rows.map(function(r){return '<div class="prow"><div class="k">'+r[0]+'</div><div class="v">'+r[1]+'</div></div>'}).join("")+
+      '</div></div>';
+    }).join("")+'</div>'+
+    '<div class="note-box">Sign-in rules are <b>configuration, not code</b> — an admin adds an allowed domain or a new identity provider from this console and it takes effect immediately, with the change written to the audit log.</div>';
+  }
+
+  function vRoles(){
+    var rows=GRANTS.map(function(g){
+      return '<tr><td><b>'+g[0]+'</b></td><td>'+pchip(g[1])+' '+g[2]+'</td><td>'+g[3]+'</td>'+
+        '<td class="term">'+g[4]+' <span class="to">→ '+g[5]+'</span></td>'+
+        '<td><span class="pill '+g[7]+'"><span class="d"></span>'+g[6]+'</span></td></tr>';
+    }).join("");
+    return '<table><thead><tr><th>Identity</th><th>Portal · role</th><th>Scope</th><th>Term</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="note-box">Access is <b>granted for a window, not forever</b>. Borrower access ends automatically <b>at funding + 90 days</b> or <b>at closing</b>; a title holder sees only title docs; a migration admin grant simply <b>expires</b> and its sessions are revoked — no cleanup, no forgotten keys.</div>';
+  }
+
+  function vOrg(){
+    return '<div class="orgcards">'+BRANCHES.map(function(b){
+      return '<div class="bc"><div class="bt"><div><b>'+b.name+'</b><span>'+b.label+' · NMLS '+b.nmls+'</span></div>'+pchip("lo")+'</div>'+
+        '<div class="stats"><div class="s"><b>'+b.officers+'</b><span>Officers</span></div><div class="s"><b>'+b.states.length+'</b><span>States</span></div></div>'+
+        '<div class="states">'+b.states.map(function(s){return '<span class="st">'+s+'</span>'}).join("")+'</div></div>';
+    }).join("")+'</div>';
+  }
+
+  function vLicensing(){
+    var codes=Object.keys(STATE_NAMES).sort();
+    var grid=codes.map(function(c){
+      var d=DSCR_STATES.indexOf(c)>-1;
+      return '<span class="scell lic'+(d?' dscr':'')+'" title="'+STATE_NAMES[c]+(d?' · DSCR-exempt':'')+'">'+c+'</span>';
+    }).join("");
+    return '<div class="legend"><span><i class="lg-lic"></i>Licensed to originate</span><span><i class="lg-dscr"></i><b style="color:var(--warn)">·D</b> also DSCR business-purpose exempt</span></div>'+
+      '<div class="stategrid">'+grid+'</div>'+
+      '<div class="note-box"><b>Owner-occupied originations</b> — the loan officer must hold the state licence; the LO User grant is scoped to exactly those states. <b>DSCR / business-purpose loans</b> in the ·D states need no state licence — so an out-of-state investor loan is still allowed. The console enforces this at the grant level.</div>';
+  }
+
+  function vInvestors(){
+    var rows=INVESTORS.map(function(v){
+      return '<tr><td><b>'+v[0]+'</b>'+(v[1]==="Preferred"?' <span class="tag">Preferred</span>':'')+'</td>'+
+        '<td><span class="pill '+v[2]+'"><span class="d"></span>'+v[1]+'</span></td><td>'+v[3]+'</td><td>'+v[4]+'</td>'+
+        '<td>'+(v[5]==="Yes"?'<span class="pill ok">DSCR</span>':'<span class="mut pill">—</span>')+'</td><td style="color:var(--soft)">'+v[6]+'</td></tr>';
+    }).join("");
+    return '<table><thead><tr><th>Investor</th><th>Tier</th><th>Products</th><th>States</th><th>DSCR</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  function vSessions(){
+    var rows=SESSIONS.map(function(s,i){
+      return '<tr><td><b>'+s[0]+'</b></td><td>'+pchip(s[1])+'</td><td class="dev">'+s[2]+'</td><td>'+s[3]+'</td><td><span class="pill ok"><span class="d"></span>'+s[4]+'</span></td><td>'+s[5]+'</td><td><button class="revoke" data-i="'+i+'">Revoke</button></td></tr>';
+    }).join("");
+    return '<table><thead><tr><th>Identity</th><th>Portal</th><th>Device</th><th>Started</th><th>Auth</th><th>Location</th><th></th></tr></thead><tbody id="sessRows">'+rows+'</tbody></table>'+
+      '<div class="note-box">Silent SSO means one sign-in can span portals — a manager moves Console → LO Portal without re-authenticating, but every hop is a session here and can be <b>revoked in one click</b>.</div>';
+  }
+
+  function vAudit(){
+    var cats=["All","Access","Config","Identity","Security","Data"];
+    var list=aCat==="All"?AUDIT:AUDIT.filter(function(a){return a.cat===aCat});
+    var rows=list.map(function(a,i){
+      var idx=AUDIT.indexOf(a);
+      return '<div class="arow" data-i="'+idx+'"><div class="l1"><time>'+a.t+'</time><span class="cat c-'+a.cat+'">'+a.cat+'</span><span class="act">'+a.action+'</span></div>'+
+        '<div class="l2">'+a.actor+' · '+a.role+' '+pchip(a.portal)+' → <b style="color:var(--ink)">'+a.target+'</b></div>'+
+        '<div class="changes">'+a.ch.map(function(c){return '<div class="chg"><span class="fld">'+c[0]+'</span><span class="from">'+c[1]+'</span><span class="arr">→</span><span class="to">'+c[2]+'</span></div>'}).join("")+'</div></div>';
+    }).join("");
+    return '<div class="acats">'+cats.map(function(c){return '<button class="'+(aCat===c?'on':'')+'" data-c="'+c+'">'+c+'</button>'}).join("")+'</div>'+rows;
+  }
+
+  function render(){
+    renderNav();renderHead();
+    var b=$("#body");
+    b.innerHTML = view==="users"?vUsers() : view==="portals"?vPortals() : view==="roles"?vRoles()
+      : view==="org"?vOrg() : view==="licensing"?vLicensing() : view==="investors"?vInvestors()
+      : view==="sessions"?vSessions() : vAudit();
+    b.scrollTop=0;
+    wire();
+  }
+  function wire(){
+    if(view==="users"){
+      $("#body").querySelectorAll(".urow").forEach(function(el){el.addEventListener("click",function(){uSel=el.getAttribute("data-id");render();})});
+      $("#body").querySelectorAll(".filters button").forEach(function(el){el.addEventListener("click",function(){uFilter=el.getAttribute("data-f");render();})});
+    }
+    if(view==="sessions"){
+      $("#body").querySelectorAll(".revoke").forEach(function(el){el.addEventListener("click",function(){var tr=el.closest("tr");tr.style.opacity=".4";el.outerHTML='<span class="pill mut">Revoked</span>';toast("Session revoked · logged to audit");})});
+    }
+    if(view==="audit"){
+      $("#body").querySelectorAll(".acats button").forEach(function(el){el.addEventListener("click",function(){aCat=el.getAttribute("data-c");render();})});
+      $("#body").querySelectorAll(".arow").forEach(function(el){el.addEventListener("click",function(){el.classList.toggle("open");})});
+    }
+  }
+  var tt;function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("show")},2400);}
+
+  window.addEventListener("message",function(e){if(e.data&&"tvhlTheme" in e.data){var t=e.data.tvhlTheme;if(t)document.documentElement.setAttribute("data-theme",t);else document.documentElement.removeAttribute("data-theme");}});
+
+  render();
+})();
+</script>
+</body>
+</html>
